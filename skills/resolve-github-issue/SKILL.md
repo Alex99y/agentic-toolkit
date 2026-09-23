@@ -41,7 +41,7 @@ If not authenticated, stop and tell the user to run `gh auth login` first.
     git worktree add .worktrees/<branch-name> -b <branch-name> <remote>/<default-branch>
 
 - Branch name format: `{tag}/{issue-number}/{slug}`
-  - `tag`: derived from the issue's label or nature (`feature`, `fix`, `chore`, `test`, etc.)
+  - `tag`: derived from the issue's label or nature (`feat`, `fix`, `chore`, `test`, etc.)
   - `issue-number`: the issue number from step 2
   - `slug`: short kebab-case description generated from the issue title (e.g. `fix/456/login-timeout`)
 - Do all remaining work inside this worktree, not in the main checkout.
