@@ -18,9 +18,8 @@ If not authenticated, stop and tell the user to run `gh auth login` first.
 
 ## 2. Read the issue
 
-- If $ARGUMENTS contains an issue number or URL, use it directly.
-- If not, ask the user which issue to work on.
-- Always use the current repository, including when the issue is provided as a URL.
+- If $ARGUMENTS contains an issue number, use it directly. Otherwise, ask the user for the issue number.
+- Always resolve it against the current repository.
 - Fetch it with `gh issue view <number>` to get the title, body, labels, and comments.
 - If the issue doesn't exist or can't be fetched, stop and report the error. Do not proceed.
 
@@ -95,6 +94,6 @@ Summarize for the user: branch name, PR link, what was verified, and anything sk
 ## Portability notes
 
 - This workflow requires shell access, Git, and the GitHub CLI (`gh`). If any are unavailable, stop and report what is missing.
-- `$ARGUMENTS` means the arguments supplied to the skill. If the host agent uses different argument syntax, use its equivalent. If arguments are unavailable, ask the user for the issue number or URL.
+- `$ARGUMENTS` means the arguments supplied to the skill. If the host agent uses different argument syntax, use its equivalent. If arguments are unavailable, ask the user for the issue number.
 - Do not assume a particular default branch, remote name, repository root, or project tooling.
 - Follow the host agent's approval and tool-permission rules for commands that modify files, push branches, or create pull requests.
