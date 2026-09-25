@@ -14,6 +14,17 @@
       },
       "license": "MIT",
       "category": "workflow"
+    },
+    {
+      "name": "go-pr-review",
+      "source": "./plugins/go-pr-review",
+      "description": "Review Go pull requests against a curated checklist of common Go pitfalls and core concurrency-safety practices, locally or via GitHub Actions.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Alex Yammine"
+      },
+      "license": "MIT",
+      "category": "code-review"
     }
   ]
 }

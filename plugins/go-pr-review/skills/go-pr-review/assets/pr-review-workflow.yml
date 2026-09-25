@@ -1,0 +1,114 @@
+# Go PR Review — GitHub Actions workflow template
+#
+# This is a TEMPLATE, not something this plugin runs automatically. Copy it
+# into the *target* Go repository (the one whose PRs you want reviewed) at
+# .github/workflows/go-pr-review.yml, then:
+#
+#   1. Add a repository secret ANTHROPIC_API_KEY (Settings > Secrets and
+#      variables > Actions) with an API key from https://console.anthropic.com.
+#   2. Make sure "Settings > Actions > General > Workflow permissions" allows
+#      "Read and write permissions" (or rely on the `permissions:` block
+#      below, which is the more explicit and preferred way).
+#   3. As shipped, this runs on-demand: comment the trigger phrase below
+#      (default `/review-go-mistakes`) on a PR to have it reviewed. To use
+#      different wording, edit the literal string in the job's `if:`
+#      condition below (it's not a variable — GitHub Actions doesn't allow
+#      the env context in a job-level `if:`, so it has to be inlined there).
+#      To go back to automatic review on every push instead, uncomment the
+#      `pull_request:` block under `on:` — the `paths` filter there only
+#      applies to that trigger, since GitHub doesn't support path filters on
+#      `issue_comment`. Both triggers can be left active at once.
+#   4. `claude` CLI flags below reflect this plugin's authoring-time
+#      knowledge of the Claude Code CLI. Run `claude --help` against the
+#      version this workflow installs if something doesn't match — flag
+#      names occasionally change across releases.
+#
+# Why the on-demand trigger needs a permission check: issue_comment events
+# always run with this repository's secrets, even for a comment from someone
+# with no write access to the repo — unlike pull_request events from a fork,
+# which run with a restricted token by default. Left ungated, anyone who can
+# comment on a PR could trigger a run that spends your ANTHROPIC_API_KEY
+# budget. The `if:` condition below only allows OWNER/MEMBER/COLLABORATOR
+# commenters; widen that list deliberately if you trust a broader group.
+#
+# This workflow installs the Claude Code CLI directly and drives it
+# headlessly with `claude -p`, rather than depending on a third-party
+# GitHub Action, so it has no dependency beyond `npm` (preinstalled on
+# GitHub-hosted runners) and stays in sync with whatever `claude-code`
+# version you pin below.
+
+name: Go PR Review
+
+on:
+  # Automatic review on every push to a PR touching .go files. Commented out
+  # by default in favor of the on-demand issue_comment trigger below — this
+  # workflow reviews by reasoning about the diff rather than running
+  # mechanical tools, so review-on-every-push can mean paying for a fresh
+  # full review after a one-line fixup commit. Uncomment if you'd rather
+  # have it run automatically than remember to comment the trigger phrase.
+  # pull_request:
+  #   types: [opened, reopened, synchronize]
+  #   paths:
+  #     - "**/*.go"
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: go-pr-review-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    # Runs for: the pull_request trigger above (if uncommented), or an
+    # issue_comment that is on a PR (not a plain issue), contains the
+    # trigger phrase, and comes from someone with write access — see the
+    # header comment for why that last check matters.
+    if: >
+      github.event_name == 'pull_request' ||
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request != null &&
+        contains(github.event.comment.body, '/review-go-mistakes') &&
+        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+      )
+    steps:
+      - name: Resolve PR number
+        id: pr
+        run: echo "number=${{ github.event.pull_request.number || github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check out the PR's branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr checkout ${{ steps.pr.outputs.number }}
+
+      - name: Set up Node (for the Claude Code CLI)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Add this marketplace and install the go-pr-review plugin
+        run: |
+          claude plugin marketplace add Alex99y/agentic-toolkit
+          claude plugin install go-pr-review@agentic-toolkit
+
+      - name: Run the Go PR review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          claude -p "Use the go-pr-reviewer agent to review pull request #${{ steps.pr.outputs.number }} in ${{ github.repository }}. Post the review via gh as the skill instructs." \
+            --allowedTools "Bash,Read,Grep,Glob,Write,Skill" \
+            --dangerously-skip-permissions

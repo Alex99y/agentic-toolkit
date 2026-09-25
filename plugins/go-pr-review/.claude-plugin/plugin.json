@@ -1,0 +1,17 @@
+{
+  "name": "go-pr-review",
+  "description": "Reviews Go pull requests against a curated checklist of common Go pitfalls and core goroutine/channel/mutex/semaphore safety practices, posting inline and summary comments via the GitHub CLI — runnable locally or from a GitHub Actions workflow.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Alex Yammine"
+  },
+  "license": "MIT",
+  "keywords": [
+    "go",
+    "golang",
+    "code review",
+    "pull requests",
+    "concurrency",
+    "github actions"
+  ]
+}
